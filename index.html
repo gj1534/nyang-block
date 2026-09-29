@@ -1,0 +1,1306 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<!--ARTIFACT-START-->
+<title>냥냥 블럭</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jua&family=Gowun+Dodum&display=swap">
+<style>
+:root{
+  /* Layout: full-bleed 3D stage; HUD pinned to the top, cards float centered over a strawberry-milk ground */
+  --ground:#FFE6DA; --ground-2:#FFD3DE; --card:#FFFBF8; --cocoa:#5B3A44; --cocoa-soft:#9A7780;
+  --berry:#FF6F8E; --berry-deep:#E4527A; --butter:#FFC94D; --line:#F2D3CC; --chip:rgba(255,251,248,.86);
+  --display:"Jua","Gowun Dodum","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
+  --body:"Gowun Dodum","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
+  color-scheme:light;
+}
+[hidden]{display:none!important}
+html,body{height:100%;margin:0;overflow:hidden;overscroll-behavior:none}
+.card,.how{word-break:keep-all;overflow-wrap:anywhere}
+body{
+  color:var(--cocoa);font-family:var(--body);
+  background-color:var(--ground);
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140' viewBox='0 0 140 140'%3E%3Cg fill='%23F5A9BA' fill-opacity='.22'%3E%3Cellipse cx='32' cy='40' rx='10' ry='8.5'/%3E%3Ccircle cx='19' cy='28' r='4.5'/%3E%3Ccircle cx='27' cy='20' r='4.5'/%3E%3Ccircle cx='37' cy='20' r='4.5'/%3E%3Ccircle cx='45' cy='28' r='4.5'/%3E%3Cg transform='translate(92 96) rotate(-18)'%3E%3Cellipse cx='0' cy='6' rx='10' ry='8.5'/%3E%3Ccircle cx='-13' cy='-6' r='4.5'/%3E%3Ccircle cx='-5' cy='-14' r='4.5'/%3E%3Ccircle cx='5' cy='-14' r='4.5'/%3E%3Ccircle cx='13' cy='-6' r='4.5'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E"),
+    radial-gradient(130% 90% at 50% 0%, #FFF3EA 0%, var(--ground) 50%, var(--ground-2) 100%);
+  background-size:140px 140px, 100% 100%;
+  -webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;touch-action:none;
+}
+#stage{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;outline:none}
+
+/* HUD */
+#hud{position:fixed;left:0;right:0;top:0;z-index:5;pointer-events:none;
+  padding:calc(env(safe-area-inset-top,0px) + 10px) 16px 0;
+  display:grid;grid-template-columns:1fr auto 1fr;align-items:start;transition:opacity .3s}
+#hud.dim{opacity:0}
+.best{justify-self:start;display:inline-flex;align-items:center;gap:6px;margin-top:4px;
+  background:var(--chip);border-radius:999px;padding:6px 12px 6px 9px;font-family:var(--display);font-size:17px;
+  box-shadow:0 2px 0 var(--line);font-variant-numeric:tabular-nums}
+.best svg{flex:none}
+.scorebox{text-align:center;display:flex;flex-direction:column;align-items:center;gap:2px}
+.scorebox .label{font-size:12px;letter-spacing:.14em;color:var(--cocoa-soft);font-family:var(--display)}
+#score{font-family:var(--display);font-size:clamp(38px,11vw,50px);line-height:1;font-variant-numeric:tabular-nums;
+  color:var(--cocoa);text-shadow:0 3px 0 #fff,0 0 18px rgba(255,255,255,.8);display:inline-block}
+#score.bump{animation:bump .38s cubic-bezier(.3,1.8,.5,1)}
+@keyframes bump{0%{transform:scale(1)}40%{transform:scale(1.2,.9)}70%{transform:scale(.95,1.06)}100%{transform:scale(1)}}
+#combo{font-family:var(--display);font-size:14px;color:#fff;background:var(--berry);border-radius:999px;padding:3px 10px;
+  box-shadow:0 2px 0 var(--berry-deep);margin-top:4px}
+.btns{justify-self:end;display:flex;gap:8px}
+.icon-btn{pointer-events:auto;width:44px;height:44px;border-radius:15px;border:0;padding:0;cursor:pointer;
+  background:var(--card);color:var(--cocoa);box-shadow:0 3px 0 var(--line);display:grid;place-items:center;
+  transition:transform .12s, box-shadow .12s}
+.icon-btn:active{transform:translateY(2px) scale(.96);box-shadow:0 1px 0 var(--line)}
+.icon-btn:focus-visible,.btn:focus-visible{outline:3px solid var(--berry);outline-offset:3px}
+
+/* floating feedback */
+#fx{position:fixed;inset:0;pointer-events:none;z-index:6;overflow:hidden}
+.float{position:absolute;transform:translate(-50%,-50%);font-family:var(--display);font-size:30px;color:var(--berry);white-space:nowrap;
+  text-shadow:0 2px 0 #fff,2px 0 0 #fff,-2px 0 0 #fff,0 -2px 0 #fff,0 0 14px rgba(255,255,255,.9);
+  animation:floatUp 1.05s ease-out forwards;font-variant-numeric:tabular-nums}
+@keyframes floatUp{0%{opacity:0;transform:translate(-50%,-30%) scale(.5)}18%{opacity:1;transform:translate(-50%,-55%) scale(1.18)}32%{transform:translate(-50%,-60%) scale(1)}100%{opacity:0;transform:translate(-50%,-190%) scale(1)}}
+#banner{position:fixed;left:50%;top:40%;transform:translate(-50%,-50%);z-index:6;pointer-events:none;text-align:center;
+  display:flex;flex-direction:column;align-items:center;gap:2px;opacity:0}
+#banner.show{animation:banner 1.3s cubic-bezier(.2,1,.3,1) forwards}
+#banner .big{font-family:var(--display);font-size:clamp(46px,14vw,70px);line-height:1;color:var(--berry);white-space:nowrap;
+  text-shadow:0 4px 0 #fff,4px 0 0 #fff,-4px 0 0 #fff,0 -4px 0 #fff,3px 3px 0 #fff,-3px 3px 0 #fff,3px -3px 0 #fff,-3px -3px 0 #fff,0 10px 24px rgba(228,82,122,.35)}
+#banner .small{font-family:var(--display);font-size:20px;color:#fff;background:var(--cocoa);border-radius:999px;padding:4px 14px}
+@keyframes banner{0%{opacity:0;transform:translate(-50%,-50%) scale(.3)}16%{opacity:1;transform:translate(-50%,-50%) scale(1.22,.86)}28%{transform:translate(-50%,-50%) scale(.92,1.08)}40%{transform:translate(-50%,-50%) scale(1)}78%{opacity:1;transform:translate(-50%,-56%) scale(1)}100%{opacity:0;transform:translate(-50%,-70%) scale(.96)}}
+
+/* overlays */
+.overlay{position:fixed;inset:0;z-index:10;display:grid;place-items:center;padding:24px 16px;
+  background:rgba(91,58,68,.16);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}
+.card{width:min(340px,100%);box-sizing:border-box;background:var(--card);border-radius:30px;padding:22px 22px 20px;text-align:center;
+  box-shadow:0 20px 50px rgba(170,70,95,.22),0 5px 0 var(--line);animation:cardIn .5s cubic-bezier(.2,1.5,.4,1);
+  display:flex;flex-direction:column;align-items:center;gap:10px}
+@keyframes cardIn{0%{opacity:0;transform:scale(.7) translateY(20px)}100%{opacity:1;transform:none}}
+.mascot{width:108px;height:auto;animation:squish 2.4s ease-in-out infinite;transform-origin:50% 90%}
+@keyframes squish{0%,100%{transform:scale(1,1)}45%{transform:scale(1,1)}55%{transform:scale(1.08,.9)}68%{transform:scale(.95,1.06)}80%{transform:scale(1.02,.98)}}
+.card h1,.card h2{font-family:var(--display);font-weight:400;margin:0;color:var(--cocoa);text-wrap:balance}
+.card h1{font-size:42px;line-height:1}
+.card h2{font-size:26px;line-height:1.2}
+.sub{margin:0;font-size:15px;color:var(--cocoa-soft);line-height:1.5;text-wrap:balance}
+.how{list-style:none;margin:4px 0 2px;padding:12px 14px;border-radius:18px;background:#FFF1EC;display:flex;flex-direction:column;gap:9px;
+  text-align:left;font-size:15px;line-height:1.35;width:100%;box-sizing:border-box}
+.how li{display:flex;gap:10px;align-items:center}
+.how .ic{flex:none;width:30px;height:30px;border-radius:10px;display:grid;place-items:center}
+.actions{display:flex;flex-direction:column;gap:12px;width:100%;margin-top:4px}
+.row{display:flex;gap:10px;width:100%}
+.btn{font-family:var(--display);font-size:21px;border:0;border-radius:18px;padding:14px 18px;width:100%;cursor:pointer;
+  background:var(--berry);color:#fff;box-shadow:0 5px 0 var(--berry-deep);transition:transform .1s, box-shadow .1s}
+.btn:active{transform:translateY(4px);box-shadow:0 1px 0 var(--berry-deep)}
+.btn.secondary{background:#F7E7E2;color:var(--cocoa);box-shadow:0 5px 0 #E7CDC7}
+.btn.secondary:active{box-shadow:0 1px 0 #E7CDC7}
+.best-line{margin:2px 0 0;font-size:14px;color:var(--cocoa-soft)}
+.best-line b{font-family:var(--display);font-weight:400;color:var(--cocoa);font-size:17px;font-variant-numeric:tabular-nums}
+.final{display:flex;flex-direction:column;align-items:center;margin:4px 0}
+.final .label{font-size:13px;letter-spacing:.12em;color:var(--cocoa-soft);font-family:var(--display)}
+.final .num{font-family:var(--display);font-size:58px;line-height:1.05;color:var(--berry);font-variant-numeric:tabular-nums}
+.record{margin:0;font-family:var(--display);font-size:16px;color:var(--cocoa);background:var(--butter);border-radius:999px;padding:4px 14px;
+  box-shadow:0 3px 0 #E8AE2C;animation:bump .6s .3s both}
+@media (prefers-reduced-motion: reduce){ .mascot{animation:none} .card{animation:none} }
+</style>
+<!--ARTIFACT-HEAD-END-->
+</head>
+<body>
+<!--ARTIFACT-BODY-START-->
+<canvas id="stage" data-ka="n-ya-ng_n-ya-ng b-eu-l_r-eo-g g-e_-i-m_p-a-n"></canvas>
+
+<div id="hud" class="dim">
+  <div class="best" data-kt="ch-oe_g-o g-i_r-o-g">
+    <svg width="20" height="16" viewBox="0 0 20 16" aria-hidden="true"><path d="M2 5l4 3.5L10 2l4 6.5L18 5l-1.6 9H3.6z" fill="#FFC94D" stroke="#E8AE2C" stroke-width="1.4" stroke-linejoin="round"/></svg>
+    <span id="best">0</span>
+  </div>
+  <div class="scorebox">
+    <span class="label" data-k="j-eo-m_s-u"></span>
+    <span id="score">0</span>
+    <span id="combo" hidden></span>
+  </div>
+  <div class="btns">
+    <button class="icon-btn" id="soundBtn">
+      <svg id="icoOn" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5z" fill="currentColor"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/></svg>
+      <svg id="icoOff" hidden width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5z" fill="currentColor"/><path d="M16 9.5l5 5M21 9.5l-5 5"/></svg>
+    </button>
+    <button class="icon-btn" id="restartBtn" data-ka="ch-eo_-eu-m_b-u_t-eo d-a_s-i">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 12a7.5 7.5 0 1 0 2.4-5.5"/><path d="M4 4.5v4h4"/></svg>
+    </button>
+  </div>
+</div>
+
+<div id="fx"></div>
+<div id="banner"><span class="big"></span><span class="small" hidden></span></div>
+
+<div class="overlay" id="startOv">
+  <div class="card">
+    <svg class="mascot" viewBox="0 0 120 100" aria-hidden="true">
+      <path d="M20 44 L26 7 L54 28 Z" fill="#FFB661" stroke="#FFB661" stroke-width="6" stroke-linejoin="round"/>
+      <path d="M100 44 L94 7 L66 28 Z" fill="#FFB661" stroke="#FFB661" stroke-width="6" stroke-linejoin="round"/>
+      <path d="M28 34 L30 17 L43 27Z" fill="#FF9DB2" stroke="#FF9DB2" stroke-width="3" stroke-linejoin="round"/>
+      <path d="M92 34 L90 17 L77 27Z" fill="#FF9DB2" stroke="#FF9DB2" stroke-width="3" stroke-linejoin="round"/>
+      <ellipse cx="60" cy="60" rx="47" ry="37" fill="#FFB661"/>
+      <path d="M50 27 q1 8 0 12 M60 25 q1 9 0 14 M70 27 q1 8 0 12" stroke="#EE8F3C" stroke-width="4.5" stroke-linecap="round" fill="none"/>
+      <ellipse cx="41" cy="57" rx="6.5" ry="8" fill="#3A2A32"/><circle cx="39" cy="54" r="2.4" fill="#fff"/>
+      <ellipse cx="79" cy="57" rx="6.5" ry="8" fill="#3A2A32"/><circle cx="77" cy="54" r="2.4" fill="#fff"/>
+      <ellipse cx="27" cy="70" rx="8" ry="5" fill="#FF7F9E" opacity=".5"/><ellipse cx="93" cy="70" rx="8" ry="5" fill="#FF7F9E" opacity=".5"/>
+      <ellipse cx="60" cy="65" rx="4.5" ry="3.2" fill="#FF8FA8"/>
+      <path d="M52 70 q4 5.5 8 0 q4 5.5 8 0" stroke="#5B3A44" stroke-width="2.6" fill="none" stroke-linecap="round"/>
+    </svg>
+    <h1 data-k="n-ya-ng_n-ya-ng b-eu-l_r-eo-g"></h1>
+    <p class="sub" data-k="m-a-l_r-a-ng_h-a-n g-o_-ya-ng_-i_d-eu-l_-eu-l p-a-n -wi_-e ss-o-g_ss-o-g ch-ae_-wo b-o_s-e_-yo"></p>
+    <ul class="how">
+      <li><span class="ic" style="background:#FFE0B8"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#C86E1E" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v18M3 12h18M12 3l-3 3M12 3l3 3M12 21l-3-3M12 21l3-3M3 12l3-3M3 12l3 3M21 12l-3-3M21 12l-3 3"/></svg></span><span data-k="b-a-ng_s-eo-g -wi g-o_-ya-ng_-i_r-eu-l kk-eu-l_-eo_s-eo p-a-n_-e -o-l_r-yeo_-yo"></span></li>
+      <li><span class="ic" style="background:#D8F2E8"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2F9C78" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><rect x="3" y="9" width="18" height="6" rx="2"/><path d="M12 3v3M12 18v3"/></svg></span><span data-k="g-a_r-o_n-a s-e_r-o h-a-n j-u-l_-i kk-wa-g ch-a_m-yeo-n s-a_r-a_j-yeo_-yo"></span></li>
+      <li><span class="ic" style="background:#FFE0E8"><svg width="18" height="18" viewBox="0 0 24 24" fill="#E4527A" aria-hidden="true"><ellipse cx="12" cy="15.5" rx="5" ry="4.2"/><circle cx="5.5" cy="10" r="2.2"/><circle cx="9.3" cy="6" r="2.2"/><circle cx="14.7" cy="6" r="2.2"/><circle cx="18.5" cy="10" r="2.2"/></svg></span><span data-k="g-o_-ya-ng_-i_r-eu-l t-o-g g-eo-n_d-eu_r-i_m-yeo-n m-a-l_r-a-ng_m-a-l_r-a-ng h-eu-n_d-eu-l_r-yeo_-yo"></span></li>
+    </ul>
+    <div class="actions">
+      <button class="btn" id="continueBtn" hidden data-k="-i_-eo_h-a_g-i"></button>
+      <button class="btn" id="newBtn" data-k="s-i_j-a-g_h-a_g-i"></button>
+    </div>
+    <p class="best-line"><span data-k="ch-oe_g-o g-i_r-o-g"></span> <b id="bestStart">0</b></p>
+  </div>
+</div>
+
+<div class="overlay" id="overOv" hidden>
+  <div class="card">
+    <svg class="mascot" viewBox="0 0 120 100" aria-hidden="true">
+      <path d="M20 44 L26 7 L54 28 Z" fill="#A4D3FF" stroke="#A4D3FF" stroke-width="6" stroke-linejoin="round"/>
+      <path d="M100 44 L94 7 L66 28 Z" fill="#A4D3FF" stroke="#A4D3FF" stroke-width="6" stroke-linejoin="round"/>
+      <path d="M28 34 L30 17 L43 27Z" fill="#FF9DB2" stroke="#FF9DB2" stroke-width="3" stroke-linejoin="round"/>
+      <path d="M92 34 L90 17 L77 27Z" fill="#FF9DB2" stroke="#FF9DB2" stroke-width="3" stroke-linejoin="round"/>
+      <ellipse cx="60" cy="60" rx="47" ry="37" fill="#A4D3FF"/>
+      <path d="M34 58 q7 -6 14 0 M72 58 q7 -6 14 0" stroke="#3A2A32" stroke-width="3.6" fill="none" stroke-linecap="round"/>
+      <ellipse cx="27" cy="70" rx="8" ry="5" fill="#FF7F9E" opacity=".5"/><ellipse cx="93" cy="70" rx="8" ry="5" fill="#FF7F9E" opacity=".5"/>
+      <ellipse cx="60" cy="65" rx="4.5" ry="3.2" fill="#FF8FA8"/>
+      <path d="M52 70 q4 5.5 8 0 q4 5.5 8 0" stroke="#5B3A44" stroke-width="2.6" fill="none" stroke-linecap="round"/>
+      <text x="98" y="30" font-family="Jua, sans-serif" font-size="16" fill="#9A7780">z</text><text x="106" y="18" font-family="Jua, sans-serif" font-size="12" fill="#9A7780">z</text>
+    </svg>
+    <h2 data-k="n-o-h_-eu-l j-a_r-i_g-a -eo-bs_-eo_-yo"></h2>
+    <p class="sub" data-k="g-o_-ya-ng_-i_d-eu-l_-i kk-wa-g ch-a-ss_-eo_-yo_. h-a-n p-a-n d-eo h-a-l_kk-a_-yo_?"></p>
+    <div class="final"><span class="label" data-k="-i_b-eo-n j-eo-m_s-u"></span><span class="num" id="finalScore">0</span></div>
+    <p class="record" id="newRecord" hidden data-k="s-ae ch-oe_g-o g-i_r-o-g_!"></p>
+    <p class="best-line"><span data-k="ch-oe_g-o g-i_r-o-g"></span> <b id="bestOver">0</b></p>
+    <div class="actions"><button class="btn" id="againBtn" data-k="d-a_s-i h-a_g-i"></button></div>
+  </div>
+</div>
+
+<div class="overlay" id="confirmOv" hidden>
+  <div class="card">
+    <h2 data-k="ch-eo_-eu-m_b-u_t-eo d-a_s-i h-a-l_kk-a_-yo_?"></h2>
+    <p class="sub" data-k="j-i_g-eu-m p-a-n_-ui g-o_-ya-ng_-i_-wa j-eo-m_s-u_n-eu-n s-a_r-a_j-yeo_-yo_."></p>
+    <div class="row">
+      <button class="btn secondary" id="cancelBtn" data-k="g-ye_s-o-g_h-a_g-i"></button>
+      <button class="btn" id="confirmBtn" data-k="d-a_s-i h-a_g-i"></button>
+    </div>
+  </div>
+</div>
+
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { mergeVertices, mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+
+/* ---------------- Hangul text: romanized syllables -> Korean ----------------
+   "n-ya-ng_n-ya-ng" = two syllables (initial-vowel-final), "_" joins syllables in a word,
+   spaces separate words, tokens without "-" are copied as-is (punctuation, numbers). */
+const HL = ['g','kk','n','d','tt','r','m','b','pp','s','ss','','j','jj','ch','k','t','p','h'];
+const HV = ['a','ae','ya','yae','eo','e','yeo','ye','o','wa','wae','oe','yo','u','wo','we','wi','yu','eu','ui','i'];
+const HT = ['','g','kk','gs','n','nj','nh','d','l','lg','lm','lb','ls','lt','lp','lh','m','b','bs','s','ss','ng','j','ch','k','t','p','h'];
+function K(spec){
+  return spec.split(' ').map(w => w.split('_').map(sy => {
+    if (!sy.includes('-')) return sy;
+    const [l, v, t = ''] = sy.split('-');
+    const li = HL.indexOf(l), vi = HV.indexOf(v), ti = HT.indexOf(t);
+    if (li < 0 || vi < 0 || ti < 0) return '?';
+    return String.fromCharCode(0xAC00 + (li*21 + vi)*28 + ti);
+  }).join('')).join(' ');
+}
+const TXT = {
+  combo: K('k-o-m_b-o') + ' ×',
+  soundOff: K('s-o_r-i kk-eu_g-i'),
+  soundOn: K('s-o_r-i k-yeo_g-i'),
+  newGame: K('s-ae g-e_-i-m'),
+  start: K('s-i_j-a-g_h-a_g-i'),
+  cheers: ['', K('n-ya-ng_!'), K('n-ya-ng_n-ya-ng_!'), K('n-ya-ng_n-ya-ng_n-ya-ng_!'), K('d-ae_b-a-g_-i_n-ya-ng_!'), K('j-eo-n_s-eo-l_-ui n-ya-ng_!')],
+};
+document.querySelectorAll('[data-k]').forEach(el => { el.textContent = K(el.dataset.k); });
+document.querySelectorAll('[data-ka]').forEach(el => { el.setAttribute('aria-label', K(el.dataset.ka)); });
+document.querySelectorAll('[data-kt]').forEach(el => { el.title = K(el.dataset.kt); });
+
+const V3 = THREE.Vector3;
+const $ = (id) => document.getElementById(id);
+const N = 8;
+const TRAY_SCALE = 0.55;
+const TRAY_Y = -0.33;
+const LIFT = 1.15;
+const SAVE_KEY = 'nyangblock.save.v1', BEST_KEY = 'nyangblock.best', SOUND_KEY = 'nyangblock.sound';
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ---------------- storage (optional) ---------------- */
+const store = {
+  get(k){ try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch(e){ return null; } },
+  set(k,v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} },
+  del(k){ try { localStorage.removeItem(k); } catch(e){} }
+};
+
+/* ---------------- renderer / scene ---------------- */
+const canvas = $('stage');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias:true, alpha:true, powerPreference:'high-performance' });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+renderer.setClearColor(0x000000, 0);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(30, 1, 0.5, 200);
+
+scene.add(new THREE.HemisphereLight(0xfff6f2, 0xf2c3cc, 1.35));
+const sun = new THREE.DirectionalLight(0xffffff, 1.55);
+sun.position.set(-4, 14, 7);
+sun.castShadow = true;
+sun.shadow.mapSize.set(1024, 1024);
+Object.assign(sun.shadow.camera, { left:-11, right:11, top:11, bottom:-11, near:1, far:40 });
+sun.shadow.bias = -0.0006;
+sun.shadow.normalBias = 0.02;
+sun.target.position.set(1.5, 0, 1.5);
+scene.add(sun, sun.target);
+
+/* ---------------- palette & shapes ---------------- */
+const WHITE = new THREE.Color('#ffffff');
+const COLORS = [
+  { body:'#FFB661', stripe:'#EE8F3C', tabby:true  }, // 0 cheese tabby
+  { body:'#FFE39E', stripe:'#F2C46B', tabby:false }, // 1 cream
+  { body:'#CDB9F6', stripe:'#AE97E6', tabby:false }, // 2 lavender
+  { body:'#A1E3CD', stripe:'#78CDB1', tabby:false }, // 3 mint
+  { body:'#FFB1C5', stripe:'#F48FAA', tabby:false }, // 4 strawberry
+  { body:'#AEBEDB', stripe:'#8398BD', tabby:true  }, // 5 blue-grey tabby
+  { body:'#A4D3FF', stripe:'#7CB6EC', tabby:false }, // 6 sky
+  { body:'#554A5F', stripe:'#403649', tabby:false, dark:true }, // 7 black cat
+];
+const BASE = {
+  I:[[0,0],[1,0],[2,0],[3,0]], O:[[0,0],[1,0],[0,1],[1,1]], T:[[0,0],[1,0],[2,0],[1,1]],
+  S:[[1,0],[2,0],[0,1],[1,1]], Z:[[0,0],[1,0],[1,1],[2,1]], J:[[0,0],[0,1],[1,1],[2,1]], L:[[2,0],[0,1],[1,1],[2,1]],
+  m1:[[0,0]], m2:[[0,0],[1,0]], m3:[[0,0],[1,0],[2,0]], v3:[[0,0],[1,0],[0,1]]
+};
+const SHAPE_COLOR = { I:6, O:1, T:2, S:3, Z:4, J:5, L:0 };
+const TETRO = ['I','O','T','S','Z','J','L'];
+const SMALL = [['m1',.16],['m2',.34],['m3',.26],['v3',.24]];
+const SMALL_COLORS = [7,7,0,4,2,3];
+
+function norm(cells){
+  let mc = Infinity, mr = Infinity;
+  for (const [c,r] of cells){ mc = Math.min(mc,c); mr = Math.min(mr,r); }
+  return cells.map(([c,r]) => [c-mc, r-mr]).sort((a,b) => a[1]-b[1] || a[0]-b[0]);
+}
+const ROT = {};
+for (const [k, cells] of Object.entries(BASE)){
+  const out = [], seen = new Set(); let cur = cells;
+  for (let i=0;i<4;i++){
+    const n = norm(cur), key = JSON.stringify(n);
+    if (!seen.has(key)){ seen.add(key); out.push(n); }
+    cur = cur.map(([c,r]) => [-r, c]);
+  }
+  ROT[k] = out;
+}
+const pick = (arr) => arr[(Math.random()*arr.length)|0];
+function randomPiece(){
+  if (Math.random() < 0.74){
+    const k = pick(TETRO);
+    return { cells: pick(ROT[k]), color: SHAPE_COLOR[k] };
+  }
+  let x = Math.random(), k = 'm1';
+  for (const [kk, w] of SMALL){ if ((x -= w) <= 0){ k = kk; break; } }
+  return { cells: pick(ROT[k]), color: pick(SMALL_COLORS) };
+}
+
+/* ---------------- jelly shader patch ----------------
+   Every cat material deforms its vertices in the cat's own space:
+   squash/stretch (uJ.x), lean from motion (uJ.yz) and a travelling wobble (uWob). */
+const TIME = { value: 0 };
+const JELLY_GLSL = `
+uniform vec3 uJ; uniform float uWob; uniform float uTime; uniform mat4 uPM; uniform mat4 uPI;
+vec3 jelly(vec3 p){
+  float hn = clamp(p.y / 0.75, 0.0, 1.9);
+  float sq = uJ.x;
+  p.y *= 1.0 - sq;
+  p.xz *= 1.0 + sq * (0.3 + 0.35 * hn);
+  p.xz += uJ.yz * hn * hn;
+  float ph = uTime * 15.0 + p.x * 2.3 + p.z * 1.9;
+  p.y += sin(ph) * uWob * 0.07 * hn;
+  p.x += sin(ph * 0.83 + 1.3) * uWob * 0.055 * hn;
+  p.z += cos(ph * 0.91) * uWob * 0.055 * hn;
+  return p;
+}`;
+const JELLY_PROJECT = `
+vec4 jwp = modelMatrix * vec4( transformed, 1.0 );
+vec3 jlp = jelly( ( uPI * jwp ).xyz );
+jwp = uPM * vec4( jlp, 1.0 );
+vec4 mvPosition = viewMatrix * jwp;
+gl_Position = projectionMatrix * mvPosition;`;
+function jelly(mat, U){
+  mat.onBeforeCompile = (sh) => {
+    Object.assign(sh.uniforms, { uJ:U.uJ, uWob:U.uWob, uTime:U.uTime, uPM:U.uPM, uPI:U.uPI });
+    sh.vertexShader = sh.vertexShader
+      .replace('#include <common>', '#include <common>\n' + JELLY_GLSL)
+      .replace('#include <project_vertex>', JELLY_PROJECT);
+  };
+  mat.customProgramCacheKey = () => 'jelly-v1';
+  return mat;
+}
+
+/* ---------------- geometry helpers ---------------- */
+const IDQ = new THREE.Quaternion();
+const ONE = new V3(1,1,1);
+const YUP = new V3(0,1,0);
+const ZROT_PI = new THREE.Quaternion().setFromAxisAngle(new V3(0,0,1), Math.PI);
+const _o = new THREE.Object3D();
+const _m = new THREE.Matrix4();
+
+function paint(g, color){
+  const c = color instanceof THREE.Color ? color : new THREE.Color(color);
+  const n = g.attributes.position.count, a = new Float32Array(n*3);
+  for (let i=0;i<n;i++){ a[i*3]=c.r; a[i*3+1]=c.g; a[i*3+2]=c.b; }
+  g.setAttribute('color', new THREE.BufferAttribute(a, 3));
+  return g;
+}
+function part(geo, color, pos = new V3(), quat = IDQ, scale = ONE){
+  const g = geo.clone();
+  if (g.attributes.uv) g.deleteAttribute('uv');
+  _o.position.copy(pos); _o.quaternion.copy(quat);
+  if (typeof scale === 'number') _o.scale.setScalar(scale); else _o.scale.copy(scale);
+  _o.updateMatrix();
+  g.applyMatrix4(_o.matrix);
+  return paint(g, color);
+}
+function merge(list){ const g = mergeGeometries(list, false); list.forEach(x => x.dispose()); return g; }
+function faceQuat(n){
+  const x = new V3(1,0,0).addScaledVector(n, -n.x).normalize();
+  const y = new V3().crossVectors(n, x);
+  _m.makeBasis(x, y, n);
+  return new THREE.Quaternion().setFromRotationMatrix(_m);
+}
+
+const earPts = [[0,0],[.17,0],[.165,.05],[.13,.14],[.075,.23],[.03,.285],[0,.3]].map(([x,y]) => new THREE.Vector2(x,y));
+const G = {
+  sphere: new THREE.SphereGeometry(1, 32, 22),
+  sphereLo: new THREE.SphereGeometry(1, 14, 10),
+  arc: new THREE.TorusGeometry(1, 0.27, 8, 18, Math.PI),
+  whisker: new THREE.CylinderGeometry(0.009, 0.006, 0.26, 5),
+  ear: new THREE.LatheGeometry(earPts, 16),
+};
+
+// Polyomino body: trace the outline, inset it, round every corner, extrude with a soft bevel.
+const INSET = 0.18, RC = 0.26, RV = 0.22;
+const bodyCache = new Map();
+function bodyBase(cells){
+  const key = cells.map(p => p.join(',')).join(';');
+  if (bodyCache.has(key)) return bodyCache.get(key);
+  let w = 0, h = 0;
+  for (const [c,r] of cells){ w = Math.max(w,c+1); h = Math.max(h,r+1); }
+  const set = new Set(cells.map(([c,r]) => c+','+r)), has = (c,r) => set.has(c+','+r);
+  const edges = new Map();
+  const add = (x1,y1,x2,y2) => edges.set(x1+','+y1, [x1,y1,x2,y2]);
+  for (const [c,r] of cells){
+    const L=c, R=c+1, T=-r, B=-r-1;
+    if (!has(c,r+1)) add(L,B,R,B);
+    if (!has(c+1,r)) add(R,B,R,T);
+    if (!has(c,r-1)) add(R,T,L,T);
+    if (!has(c-1,r)) add(L,T,L,B);
+  }
+  const pts = [];
+  let e = edges.values().next().value; const startK = e[0]+','+e[1];
+  let guard = 0;
+  do { pts.push([e[0],e[1]]); e = edges.get(e[2]+','+e[3]); } while (e && (e[0]+','+e[1]) !== startK && ++guard < 200);
+  const poly = [];
+  for (let i=0;i<pts.length;i++){
+    const a = pts[(i-1+pts.length)%pts.length], b = pts[i], c = pts[(i+1)%pts.length];
+    if ((b[0]-a[0])*(c[1]-b[1]) - (b[1]-a[1])*(c[0]-b[0]) !== 0) poly.push(b);
+  }
+  const m = poly.length, V = [];
+  for (let i=0;i<m;i++){
+    const a = poly[(i-1+m)%m], b = poly[i], c = poly[(i+1)%m];
+    const d1 = [Math.sign(b[0]-a[0]), Math.sign(b[1]-a[1])], d2 = [Math.sign(c[0]-b[0]), Math.sign(c[1]-b[1])];
+    const n1 = [-d1[1], d1[0]], n2 = [-d2[1], d2[0]];
+    const convex = d1[0]*d2[1] - d1[1]*d2[0] > 0;
+    V.push({ p:[b[0] + INSET*(n1[0]+n2[0]), b[1] + INSET*(n1[1]+n2[1])], d1, d2, r: convex ? RC : RV });
+  }
+  const shape = new THREE.Shape(), KK = 0.5523;
+  let first = null;
+  V.forEach((v, i) => {
+    const A = [v.p[0]-v.d1[0]*v.r, v.p[1]-v.d1[1]*v.r], B = [v.p[0]+v.d2[0]*v.r, v.p[1]+v.d2[1]*v.r];
+    if (i === 0){ shape.moveTo(A[0], A[1]); first = A; } else shape.lineTo(A[0], A[1]);
+    shape.bezierCurveTo(A[0]+v.d1[0]*v.r*KK, A[1]+v.d1[1]*v.r*KK, B[0]-v.d2[0]*v.r*KK, B[1]-v.d2[1]*v.r*KK, B[0], B[1]);
+  });
+  shape.lineTo(first[0], first[1]);
+  let g = new THREE.ExtrudeGeometry(shape, { depth:0.34, bevelEnabled:true, bevelThickness:0.15, bevelSize:0.13, bevelSegments:4, curveSegments:6 });
+  g.rotateX(-Math.PI/2);
+  g.translate(-w/2, 0.15, -h/2);
+  g.deleteAttribute('uv'); g.deleteAttribute('normal'); g.clearGroups();
+  g = mergeVertices(g, 1e-4);
+  g.computeVertexNormals();
+  bodyCache.set(key, g);
+  return g;
+}
+const tailCache = new Map();
+function tailBase(side){
+  const k = side.join(',');
+  if (tailCache.has(k)) return tailCache.get(k);
+  const s = new V3(side[0], 0, side[1]);
+  const perp = new V3(-side[1], 0, side[0]);
+  const P = (a, y, p=0) => s.clone().multiplyScalar(a).add(new V3(0,y,0)).addScaledVector(perp, p);
+  const pts = [P(0,0), P(.2,.05), P(.34,.3,.03), P(.27,.58,.05), P(.09,.72,.02)];
+  const g = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 28, 0.075, 10, false);
+  g.userData.end = pts[4];
+  tailCache.set(k, g);
+  return g;
+}
+
+/* ---------------- cats ---------------- */
+const HEAD_R = new V3(0.5, 0.37, 0.45);
+const FACE_F = new V3(0, 0.74, 0.67).normalize();
+const FACE_R = new V3(1, 0, 0);
+const FACE_U = new V3().crossVectors(FACE_F, FACE_R).normalize();
+function surf(a, b, lift = 0){
+  const d = FACE_F.clone().addScaledVector(FACE_R, a).addScaledVector(FACE_U, b).normalize();
+  const n = d.clone().divide(HEAD_R).normalize();
+  const p = d.clone().multiply(HEAD_R).addScaledVector(n, lift);
+  return { p, n };
+}
+
+const cats = new Set();
+let catSeq = 1;
+
+function makeCat(cellsIn, colorIdx){
+  const cells = norm(cellsIn);
+  let w = 0, h = 0;
+  for (const [c,r] of cells){ w = Math.max(w,c+1); h = Math.max(h,r+1); }
+  const set = new Set(cells.map(([c,r]) => c+','+r)), has = (c,r) => set.has(c+','+r);
+  const def = COLORS[colorIdx];
+  const cBody = new THREE.Color(def.body);
+  const cLight = cBody.clone().lerp(WHITE, 0.62);
+  const cStripe = new THREE.Color(def.stripe);
+  const cPink = new THREE.Color('#FF94AC');
+  const cInk = new THREE.Color(def.dark ? '#FFC7D4' : '#5B3A44');
+  const cBlush = cBody.clone().lerp(new THREE.Color('#FF7F9E'), def.dark ? 0.35 : 0.5);
+  const cWhisk = new THREE.Color(def.dark ? '#D9CCD8' : '#8B6B74');
+  const cEye = new THREE.Color(def.dark ? '#E2EE78' : '#3A2A32');
+
+  const U = { uJ:{ value:new V3() }, uWob:{ value:0 }, uTime:TIME, uPM:{ value:new THREE.Matrix4() }, uPI:{ value:new THREE.Matrix4() } };
+  const main = jelly(new THREE.MeshPhysicalMaterial({ vertexColors:true, roughness:0.62, sheen:0.7, sheenRoughness:0.5, sheenColor:new THREE.Color('#fff2ea') }), U);
+  const flat = jelly(new THREE.MeshBasicMaterial({ vertexColors:true }), U);
+  const geos = new Set();
+  const group = new THREE.Group();
+  const mesh = (geo, mat, parent, shadow = false) => {
+    const m = new THREE.Mesh(geo, mat); m.castShadow = shadow; m.receiveShadow = shadow; parent.add(m); geos.add(geo); return m;
+  };
+  const lc = (c,r) => new V3(c + 0.5 - w/2, 0, r + 0.5 - h/2);
+
+  mesh(paint(bodyBase(cells).clone(), cBody), main, group, true);
+
+  // the head sits on a cell with nothing behind it, so the ears have room
+  const cand = cells.filter(([c,r]) => !has(c, r-1));
+  const head = pick(cand);
+  const hc = lc(head[0], head[1]);
+  const headG = new THREE.Group();
+  headG.position.set(hc.x, 0.74, hc.z - 0.03);
+  group.add(headG);
+  mesh(part(G.sphere, cBody, undefined, undefined, HEAD_R), main, headG, true);
+
+  const earGeo = merge([
+    part(G.ear, cBody, new V3(), IDQ, new V3(1, 1, 0.62)),
+    part(G.ear, cPink, new V3(0, 0.03, 0.06), IDQ, new V3(0.58, 0.64, 0.4)),
+  ]);
+  const ears = [];
+  for (const s of [-1, 1]){
+    const piv = new THREE.Group();
+    piv.position.set(s*0.28, 0.22, -0.14);
+    piv.rotation.set(-0.22, 0, -s*0.34);
+    piv.scale.setScalar(1.15);
+    headG.add(piv); mesh(earGeo, main, piv, true); ears.push(piv);
+  }
+
+  const eyeParts = [part(G.sphereLo, cEye, new V3(), IDQ, new V3(0.084, 0.102, 0.042))];
+  if (def.dark) eyeParts.push(part(G.sphereLo, new THREE.Color('#2B2233'), new V3(0, 0, 0.026), IDQ, new V3(0.03, 0.072, 0.018)));
+  eyeParts.push(part(G.sphereLo, WHITE, new V3(-0.024, 0.032, 0.033), IDQ, 0.026));
+  eyeParts.push(part(G.sphereLo, WHITE, new V3(0.023, -0.028, 0.033), IDQ, 0.012));
+  const eyeGeo = merge(eyeParts);
+  const hapGeo = part(G.arc, cInk, new V3(0, -0.02, 0.02), IDQ, 0.058);
+  const eyes = [];
+  for (const s of [-1, 1]){
+    const { p, n } = surf(s*0.35, 0.14);
+    const piv = new THREE.Group(); piv.position.copy(p); piv.quaternion.copy(faceQuat(n)); headG.add(piv);
+    const open = mesh(eyeGeo, flat, piv);
+    const hap = mesh(hapGeo, flat, piv); hap.visible = false;
+    eyes.push({ piv, open, hap });
+  }
+
+  const fd = [];
+  { const { p, n } = surf(0, -0.1); fd.push(part(G.sphereLo, cPink, p, faceQuat(n), new V3(0.044, 0.031, 0.026))); }
+  for (const s of [-1, 1]){ const { p, n } = surf(s*0.1, -0.27, 0.004); fd.push(part(G.arc, cInk, p, faceQuat(n).multiply(ZROT_PI), 0.046)); }
+  for (const s of [-1, 1]){ const { p, n } = surf(s*0.7, -0.2); fd.push(part(G.sphereLo, cBlush, p, faceQuat(n), new V3(0.085, 0.055, 0.012))); }
+  for (const s of [-1, 1]) for (const k of [0.16, -0.05]){
+    const { p } = surf(s*0.82, -0.2);
+    const dir = new V3(s, k, 0.3).normalize();
+    fd.push(part(G.whisker, cWhisk, p.clone().addScaledVector(dir, 0.1), new THREE.Quaternion().setFromUnitVectors(YUP, dir)));
+  }
+  if (def.tabby) for (const [a, b, l] of [[-0.2, 0.6, 0.75], [0, 0.68, 1], [0.2, 0.6, 0.75]]){
+    const { p, n } = surf(a, b); fd.push(part(G.sphereLo, cStripe, p, faceQuat(n), new V3(0.03, 0.085*l, 0.014)));
+  }
+  mesh(merge(fd), main, headG);
+
+  const bd = [];
+  if (!has(head[0], head[1]+1)) for (const s of [-1, 1]) bd.push(part(G.sphereLo, cLight, new V3(hc.x + s*0.17, 0.1, hc.z + 0.42), IDQ, new V3(0.11, 0.08, 0.1)));
+  const others = cells.filter(([c,r]) => c !== head[0] || r !== head[1]);
+  if (def.tabby){
+    for (const [c,r] of others){ const q = lc(c,r); for (const dz of [-0.15, 0.13]) bd.push(part(G.sphereLo, cStripe, new V3(q.x, 0.632, q.z + dz), IDQ, new V3(0.3, 0.022, 0.055))); }
+  } else if (others.length){
+    const [c,r] = pick(others), q = lc(c,r);
+    bd.push(part(G.sphereLo, def.dark ? cBody.clone().lerp(WHITE, 0.8) : cLight, new V3(q.x + (Math.random()-.5)*0.14, 0.63, q.z + (Math.random()-.5)*0.14), IDQ, new V3(0.24, 0.024, 0.2)));
+  }
+  if (bd.length) mesh(merge(bd), main, group);
+
+  // the tail grows from the cell farthest from the head, out of a free side
+  let tailCell = head, far = -1;
+  for (const cl of cells){
+    const d = Math.abs(cl[0]-head[0]) + Math.abs(cl[1]-head[1]);
+    if (d > far || (d === far && Math.random() < 0.5)){ far = d; tailCell = cl; }
+  }
+  const sx = Math.random() < 0.5 ? 1 : -1;
+  let side = null;
+  for (const [dx, dz] of [[sx,0],[-sx,0],[0,1],[0,-1]]){
+    if (has(tailCell[0]+dx, tailCell[1]+dz)) continue;
+    if (tailCell === head && dz !== 0) continue;
+    side = [dx, dz]; break;
+  }
+  if (!side) side = [sx, 0];
+  const tq = lc(tailCell[0], tailCell[1]);
+  const tailPiv = new THREE.Group();
+  tailPiv.position.set(tq.x + side[0]*0.4, 0.3, tq.z + side[1]*0.4);
+  group.add(tailPiv);
+  const tb = tailBase(side);
+  mesh(merge([part(tb, cBody), part(G.sphereLo, cLight, tb.userData.end, IDQ, 0.082)]), main, tailPiv, true);
+
+  scene.add(group);
+  const cat = {
+    id: catSeq++, cells, w, h, color: colorIdx, group, U, mats:[main, flat], geos, eyes, ears, headG, tailPiv,
+    j:{ s:0, sv:0, lx:0, lz:0, lvx:0, lvz:0, w:0 }, tilt:0, tiltV:0, tiltT:0, flick:0,
+    phase: Math.random()*Math.PI*2, blinkT: 1 + Math.random()*4, blinkP: -1, happyT: 0, hover: false, sad: false,
+    earT: 2 + Math.random()*5, earP: -1, earSide: 0,
+    tp: new V3(), ts: 1, rate: 16, vel: new V3(), landing: false, abs: null, slot: -1,
+  };
+  cats.add(cat);
+  return cat;
+}
+function disposeCat(cat){
+  scene.remove(cat.group);
+  cat.geos.forEach(g => g.dispose());
+  cat.mats.forEach(m => m.dispose());
+  cats.delete(cat);
+}
+
+const _prev = new V3();
+function updateCat(cat, dt, t){
+  const g = cat.group;
+  _prev.copy(g.position);
+  g.position.lerp(cat.tp, 1 - Math.exp(-cat.rate*dt));
+  const sc = g.scale.x + (cat.ts - g.scale.x) * (1 - Math.exp(-14*dt));
+  g.scale.setScalar(Math.max(sc, 0.001));
+  cat.vel.subVectors(g.position, _prev).divideScalar(Math.max(dt, 1e-4));
+  if (cat.landing && g.position.distanceTo(cat.tp) < 0.035){ cat.landing = false; g.position.copy(cat.tp); onLand(cat); }
+
+  const j = cat.j, m = reduceMotion ? 0.4 : 1;
+  const breath = Math.sin(t*2.1 + cat.phase) * 0.012 * m;
+  j.sv += (-(j.s - breath)*240 - j.sv*8.5) * dt; j.s += j.sv*dt;
+  j.s = Math.max(-0.4, Math.min(0.42, j.s));
+  const inv = 1 / Math.max(g.scale.x, 0.2);
+  const tlx = Math.max(-0.34, Math.min(0.34, -cat.vel.x*0.045*inv));
+  const tlz = Math.max(-0.34, Math.min(0.34, -cat.vel.z*0.045*inv));
+  j.lvx += (-(j.lx - tlx)*170 - j.lvx*9) * dt; j.lx += j.lvx*dt;
+  j.lvz += (-(j.lz - tlz)*170 - j.lvz*9) * dt; j.lz += j.lvz*dt;
+  j.w *= Math.exp(-dt*2.6);
+  cat.U.uJ.value.set(j.s, j.lx, j.lz);
+  cat.U.uWob.value = j.w * m;
+
+  // blinking and expressions
+  cat.blinkT -= dt;
+  if (cat.blinkT <= 0 && cat.blinkP < 0){ cat.blinkP = 0; cat.blinkT = 2.5 + Math.random()*4; }
+  let ey = 1;
+  if (cat.blinkP >= 0){ cat.blinkP += dt/0.15; if (cat.blinkP >= 1) cat.blinkP = -1; else ey = 1 - Math.sin(cat.blinkP*Math.PI)*0.9; }
+  if (cat.sad) ey = 0.12;
+  cat.happyT -= dt;
+  const happy = !cat.sad && (cat.happyT > 0 || cat.hover);
+  for (const e of cat.eyes){ e.piv.scale.y = happy ? 1 : ey; e.open.visible = !happy; e.hap.visible = happy; }
+
+  // ear twitch
+  cat.earT -= dt;
+  if (cat.earT <= 0){ cat.earT = 3 + Math.random()*6; cat.earP = 0; cat.earSide = Math.random() < 0.5 ? 0 : 1; }
+  if (cat.earP >= 0){
+    cat.earP += dt/0.3;
+    const k = cat.earP >= 1 ? 0 : Math.sin(cat.earP*Math.PI*2) * 0.3 * (1 - cat.earP);
+    cat.ears[cat.earSide].rotation.x = -0.22 + k;
+    if (cat.earP >= 1) cat.earP = -1;
+  }
+  // tail sway and head tilt
+  cat.flick *= Math.exp(-dt*3);
+  cat.tailPiv.rotation.y = Math.sin(t*1.7 + cat.phase)*0.3*m + Math.sin(t*16)*cat.flick;
+  cat.tiltT *= Math.exp(-dt*1.6);
+  cat.tiltV += (-(cat.tilt - cat.tiltT)*120 - cat.tiltV*8) * dt; cat.tilt += cat.tiltV*dt;
+  cat.headG.rotation.z = cat.tilt;
+
+  g.updateMatrixWorld(true);
+  cat.U.uPM.value.copy(g.matrixWorld);
+  cat.U.uPI.value.copy(g.matrixWorld).invert();
+}
+function poke(cat, k = 1){
+  cat.j.sv += 5.5*k; cat.j.w = Math.max(cat.j.w, 0.9*k);
+  cat.happyT = Math.max(cat.happyT, 1.1*k);
+  cat.tiltT = (Math.random() < 0.5 ? -1 : 1) * 0.26 * k;
+  cat.flick = 0.35*k;
+}
+
+/* ---------------- board, beds, ground ---------------- */
+function rrShape(w, h, r){
+  const s = new THREE.Shape(), x = -w/2, y = -h/2;
+  s.moveTo(x+r, y); s.lineTo(x+w-r, y); s.quadraticCurveTo(x+w, y, x+w, y+r);
+  s.lineTo(x+w, y+h-r); s.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
+  s.lineTo(x+r, y+h); s.quadraticCurveTo(x, y+h, x, y+h-r);
+  s.lineTo(x, y+r); s.quadraticCurveTo(x, y, x+r, y);
+  return s;
+}
+function slab(w, h, r, depth, top, color){
+  const g = new THREE.ExtrudeGeometry(rrShape(w, h, r), { depth, bevelEnabled:true, bevelThickness:0.06, bevelSize:0.06, bevelSegments:3, curveSegments:12 });
+  g.rotateX(-Math.PI/2); g.translate(0, top - depth - 0.06, 0);
+  const m = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ color, roughness:0.85 }));
+  m.receiveShadow = true; m.castShadow = true; scene.add(m); return m;
+}
+slab(9.1, 9.1, 0.8, 0.3, -0.14, '#FFC3D0');
+slab(8.7, 8.7, 0.6, 0.36, 0, '#FFF9F5');
+
+const tileGeo = new THREE.ShapeGeometry(rrShape(0.9, 0.9, 0.2), 6); tileGeo.rotateX(-Math.PI/2);
+const tiles = new THREE.InstancedMesh(tileGeo, new THREE.MeshStandardMaterial({ color:0xffffff, roughness:0.95 }), N*N);
+tiles.receiveShadow = true;
+const tileBase = [];
+for (let r=0;r<N;r++) for (let c=0;c<N;c++){
+  const i = r*N + c;
+  _o.position.set(c - 3.5, 0.004, r - 3.5); _o.quaternion.identity(); _o.scale.set(1,1,1); _o.updateMatrix();
+  tiles.setMatrixAt(i, _o.matrix);
+  tileBase[i] = new THREE.Color((r + c) % 2 ? '#F7E4DC' : '#F2DAD1');
+  tiles.setColorAt(i, tileBase[i]);
+}
+scene.add(tiles);
+
+const catcher = new THREE.Mesh(new THREE.PlaneGeometry(80, 80).rotateX(-Math.PI/2), new THREE.ShadowMaterial({ color:0xb0506a, opacity:0.14 }));
+catcher.position.y = -0.49; catcher.receiveShadow = true; scene.add(catcher);
+
+const RING = ['#FFC6D2', '#FFDFA6', '#C6E0FF'];
+const slots = [0,1,2].map(i => {
+  const bed = new THREE.Group();
+  const pad = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.26, 0.16, 48), new THREE.MeshStandardMaterial({ color:'#FFFCFA', roughness:0.95 }));
+  pad.position.y = -0.41; pad.receiveShadow = true; pad.castShadow = true;
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(1.2, 0.13, 14, 64), new THREE.MeshStandardMaterial({ color:RING[i], roughness:0.8 }));
+  ring.rotation.x = Math.PI/2; ring.position.y = -0.31; ring.receiveShadow = true; ring.castShadow = true;
+  bed.add(pad, ring); scene.add(bed);
+  return { pos:new V3(), bed, cat:null };
+});
+
+/* ---------------- particles ---------------- */
+function makeTex(draw){
+  const c = document.createElement('canvas'); c.width = c.height = 64;
+  const x = c.getContext('2d'); x.fillStyle = '#fff'; draw(x);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+}
+const TEX = {
+  heart: makeTex(x => { x.beginPath(); x.moveTo(32,55); x.bezierCurveTo(4,38,4,16,18,11); x.bezierCurveTo(26,8,32,13,32,20); x.bezierCurveTo(32,13,38,8,46,11); x.bezierCurveTo(60,16,60,38,32,55); x.fill(); }),
+  star: makeTex(x => { x.beginPath(); for (let i=0;i<10;i++){ const r = i%2 ? 11 : 27, a = -Math.PI/2 + i*Math.PI/5; x.lineTo(32 + Math.cos(a)*r, 34 + Math.sin(a)*r); } x.closePath(); x.lineJoin = 'round'; x.lineWidth = 6; x.strokeStyle = '#fff'; x.stroke(); x.fill(); }),
+  paw: makeTex(x => { x.beginPath(); x.ellipse(32,42,13,11,0,0,Math.PI*2); x.fill(); for (const [px,py] of [[15,26],[25,16],[39,16],[49,26]]){ x.beginPath(); x.arc(px,py,6.5,0,Math.PI*2); x.fill(); } }),
+  dot: makeTex(x => { x.beginPath(); x.arc(32,32,22,0,Math.PI*2); x.fill(); }),
+};
+const parts = [];
+for (let i=0;i<100;i++){
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map:TEX.dot, transparent:true, depthWrite:false }));
+  s.visible = false; s.renderOrder = 10; scene.add(s);
+  parts.push({ s, vel:new V3(), life:0, max:1, size:0.3, spin:0, active:false });
+}
+function burst(pos, n, kinds, colors, power = 1){
+  for (let i=0;i<n;i++){
+    const p = parts.find(q => !q.active); if (!p) return;
+    p.active = true; p.s.visible = true;
+    p.s.material.map = TEX[kinds[i % kinds.length]];
+    p.s.material.color.set(Array.isArray(colors) ? colors[i % colors.length] : colors);
+    p.s.material.rotation = (Math.random() - 0.5)*0.8;
+    p.s.position.copy(pos);
+    p.vel.set((Math.random()-0.5)*2.8*power, (2 + Math.random()*2.2)*power, (Math.random()-0.5)*2.8*power);
+    p.life = 0; p.max = 0.7 + Math.random()*0.45; p.size = 0.26 + Math.random()*0.18; p.spin = (Math.random()-0.5)*4;
+  }
+}
+function updateParts(dt){
+  for (const p of parts){
+    if (!p.active) continue;
+    p.life += dt;
+    if (p.life >= p.max){ p.active = false; p.s.visible = false; continue; }
+    p.vel.y -= 5.2*dt;
+    p.s.position.addScaledVector(p.vel, dt);
+    const k = p.life/p.max;
+    p.s.scale.setScalar(p.size * Math.min(1, p.life/0.08) * (1 - k*0.3));
+    p.s.material.opacity = 1 - k*k;
+    p.s.material.rotation += p.spin*dt;
+  }
+}
+
+// puffs: a plain cell-sized blob that swells and pops where part of a cat vanished
+const puffMats = COLORS.map(c => new THREE.MeshStandardMaterial({ color:c.body, roughness:0.6 }));
+const puffs = [];
+function spawnPuff(pos, color, delay){
+  const m = new THREE.Mesh(bodyBase([[0,0]]), puffMats[color]);
+  m.position.copy(pos); m.castShadow = true; scene.add(m);
+  puffs.push({ m, delay, t:0, popped:false, color });
+}
+function updatePuffs(dt){
+  for (let i = puffs.length - 1; i >= 0; i--){
+    const p = puffs[i];
+    if (p.delay > 0){ p.delay -= dt; continue; }
+    p.t += dt;
+    if (p.t < 0.09){ const k = p.t/0.09; p.m.scale.set(1 + k*0.18, 1 - k*0.25, 1 + k*0.18); }
+    else {
+      if (!p.popped){ p.popped = true; burst(p.m.position.clone().setY(0.6), 3, ['star','heart','paw'], ['#FFD166', '#FF8FAB', COLORS[p.color].body]); }
+      const k = Math.min(1, (p.t - 0.09)/0.2);
+      const s = (1 - k) * (1.18 + 0.3*Math.sin(k*Math.PI));
+      p.m.scale.set(Math.max(s, 0.001), Math.max(s*1.1, 0.001), Math.max(s, 0.001)); p.m.position.y = k*0.5; p.m.rotation.y = k*1.2;
+      if (k >= 1){ scene.remove(p.m); puffs.splice(i, 1); }
+    }
+  }
+}
+
+/* ---------------- sound (synthesized, starts after the first tap) ---------------- */
+let AC = null, master = null, soundOn = store.get(SOUND_KEY) !== false;
+function audioUnlock(){
+  if (!AC){
+    try { AC = new (window.AudioContext || window.webkitAudioContext)(); master = AC.createGain(); master.gain.value = 0.9; master.connect(AC.destination); }
+    catch(e){ return; }
+  }
+  if (AC.state === 'suspended') AC.resume();
+}
+function blip(f0, f1, dur, type = 'sine', vol = 0.2, delay = 0){
+  if (!AC || !soundOn) return;
+  const t = AC.currentTime + delay, o = AC.createOscillator(), g = AC.createGain();
+  o.type = type; o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f1, t + dur);
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(g).connect(master); o.start(t); o.stop(t + dur + 0.05);
+}
+function meow(p = 1, vol = 0.15, delay = 0){
+  if (!AC || !soundOn) return;
+  const t = AC.currentTime + delay;
+  const o = AC.createOscillator(), o2 = AC.createOscillator(), f = AC.createBiquadFilter(), g = AC.createGain();
+  o.type = 'sawtooth'; o2.type = 'triangle'; o2.detune.value = 8;
+  for (const x of [o, o2]){
+    x.frequency.setValueAtTime(480*p, t); x.frequency.linearRampToValueAtTime(840*p, t + 0.09);
+    x.frequency.linearRampToValueAtTime(760*p, t + 0.2); x.frequency.linearRampToValueAtTime(520*p, t + 0.36);
+  }
+  f.type = 'bandpass'; f.Q.value = 2.4;
+  f.frequency.setValueAtTime(900*p, t); f.frequency.linearRampToValueAtTime(2200*p, t + 0.1); f.frequency.linearRampToValueAtTime(1100*p, t + 0.36);
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.04);
+  g.gain.setValueAtTime(vol*0.85, t + 0.22); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.42);
+  o.connect(f); o2.connect(f); f.connect(g).connect(master);
+  o.start(t); o2.start(t); o.stop(t + 0.46); o2.stop(t + 0.46);
+}
+const NOTES = [523.25, 659.25, 783.99, 1046.5, 1318.5, 1568];
+const sfx = {
+  pick(){ blip(620, 980, 0.09, 'sine', 0.13); },
+  drop(){ blip(330, 160, 0.15, 'triangle', 0.22); blip(1100, 700, 0.05, 'sine', 0.05, 0.01); },
+  nope(){ blip(280, 210, 0.11, 'square', 0.045); blip(230, 170, 0.13, 'square', 0.045, 0.1); },
+  clear(lines, combo){
+    const up = 1 + Math.min(combo - 1, 6)*0.06, n = Math.min(3 + lines, 6);
+    for (let i=0;i<n;i++) blip(NOTES[i]*up, NOTES[i]*up*1.01, 0.24, 'triangle', 0.11, i*0.055);
+    meow(1.25*up, 0.1, 0.12); if (lines > 1) meow(1.45*up, 0.08, 0.26);
+  },
+  over(){ [523, 440, 349, 262].forEach((f, i) => blip(f, f*0.97, 0.32, 'triangle', 0.13, i*0.17)); meow(0.8, 0.12, 0.7); },
+};
+function buzz(ms){ try { navigator.vibrate && navigator.vibrate(ms); } catch(e){} }
+const pitchFor = (cat) => 1.02 + (4 - cat.cells.length)*0.08 + Math.random()*0.1;
+
+/* ---------------- game state ---------------- */
+const grid = new Int32Array(N*N);
+const boardCats = new Map();
+let score = 0, shownScore = 0, best = store.get(BEST_KEY) || 0, combo = 0, sinceClear = 0;
+let state = 'menu', busyUntil = 0, drag = null;
+const timers = [];
+const later = (s, fn) => timers.push({ t:s, fn });
+
+const boardPos = (cat) => {
+  let mc = Infinity, mr = Infinity;
+  for (const [c,r] of cat.abs){ mc = Math.min(mc,c); mr = Math.min(mr,r); }
+  return new V3(mc + cat.w/2 - N/2, 0, mr + cat.h/2 - N/2);
+};
+function canPlace(cells, col, row){
+  for (const [c,r] of cells){
+    const x = c + col, y = r + row;
+    if (x < 0 || y < 0 || x >= N || y >= N || grid[y*N + x]) return false;
+  }
+  return true;
+}
+function fitsAnywhere(cells){
+  for (let r=0;r<N;r++) for (let c=0;c<N;c++) if (canPlace(cells, c, r)) return true;
+  return false;
+}
+function fullLines(extra){
+  const filled = (i) => grid[i] || (extra && extra.has(i));
+  const rows = [], cols = [];
+  for (let r=0;r<N;r++){ let ok = true; for (let c=0;c<N;c++) if (!filled(r*N+c)){ ok = false; break; } if (ok) rows.push(r); }
+  for (let c=0;c<N;c++){ let ok = true; for (let r=0;r<N;r++) if (!filled(r*N+c)){ ok = false; break; } if (ok) cols.push(c); }
+  return { rows, cols };
+}
+function lineCells(rows, cols){
+  const s = new Set();
+  rows.forEach(r => { for (let c=0;c<N;c++) s.add(r*N+c); });
+  cols.forEach(c => { for (let r=0;r<N;r++) s.add(r*N+c); });
+  return s;
+}
+function components(cells){
+  const left = new Set(cells.map(([c,r]) => c+','+r)), out = [];
+  for (const [c0,r0] of cells){
+    const k0 = c0+','+r0; if (!left.has(k0)) continue;
+    const comp = [], q = [[c0,r0]]; left.delete(k0);
+    while (q.length){
+      const [c,r] = q.pop(); comp.push([c,r]);
+      for (const [dc,dr] of [[1,0],[-1,0],[0,1],[0,-1]]){ const k = (c+dc)+','+(r+dr); if (left.has(k)){ left.delete(k); q.push([c+dc, r+dr]); } }
+    }
+    out.push(comp);
+  }
+  return out;
+}
+
+function putOnBoard(cat, absCells){
+  cat.abs = absCells.map(p => p.slice());
+  for (const [c,r] of cat.abs) grid[r*N + c] = cat.id;
+  boardCats.set(cat.id, cat);
+  cat.slot = -1;
+}
+function placeInstant(cat, absCells){
+  putOnBoard(cat, absCells);
+  cat.tp.copy(boardPos(cat)); cat.group.position.copy(cat.tp);
+  cat.ts = 1; cat.group.scale.setScalar(1); cat.rate = 20;
+}
+function setSlot(i, cat, popIn = true){
+  const s = slots[i]; s.cat = cat; cat.slot = i;
+  cat.tp.copy(s.pos).setY(TRAY_Y); cat.ts = TRAY_SCALE; cat.rate = 14;
+  cat.group.position.copy(cat.tp);
+  cat.group.scale.setScalar(popIn ? 0.001 : TRAY_SCALE);
+}
+function genTray(){
+  for (let a=0;a<40;a++){
+    const set = [randomPiece(), randomPiece(), randomPiece()];
+    if (set.some(p => fitsAnywhere(p.cells))) return set;
+  }
+  return [{ cells:[[0,0]], color:7 }, randomPiece(), { cells:[[0,0],[1,0]], color:4 }];
+}
+function fillTray(popIn = true){
+  genTray().forEach((p, i) => {
+    const cat = makeCat(p.cells, p.color);
+    setSlot(i, cat, popIn);
+    if (popIn){
+      cat.ts = 0.001;
+      later(0.08 + i*0.11, () => { if (cat.slot === i) { cat.ts = TRAY_SCALE; poke(cat, 0.8); } });
+    }
+  });
+}
+
+function serialize(){
+  return {
+    v:1, state, score, combo, sinceClear,
+    board:[...boardCats.values()].map(c => ({ cells:c.abs, color:c.color })),
+    tray: slots.map(s => s.cat ? { cells:s.cat.cells, color:s.cat.color } : null),
+  };
+}
+function save(){ if (state === 'play') store.set(SAVE_KEY, serialize()); }
+function restore(d){
+  for (const b of d.board || []) placeInstant(makeCat(b.cells, b.color), b.cells);
+  (d.tray || []).forEach((p, i) => { if (p) setSlot(i, makeCat(p.cells, p.color), false); });
+  if (slots.every(s => !s.cat)) fillTray(false);
+  score = shownScore = d.score || 0; combo = d.combo || 0; sinceClear = d.sinceClear || 0;
+}
+function clearEverything(withPuffs){
+  drag = null;
+  for (const cat of boardCats.values()){
+    if (withPuffs) for (const [c,r] of cat.abs) spawnPuff(new V3(c-3.5, 0, r-3.5), cat.color, Math.random()*0.25);
+    disposeCat(cat);
+  }
+  boardCats.clear(); grid.fill(0);
+  for (const s of slots){ if (s.cat){ disposeCat(s.cat); s.cat = null; } }
+  timers.length = 0;
+  tilesDirty = true;
+}
+function newGame(){
+  clearEverything(true);
+  score = shownScore = 0; combo = 0; sinceClear = 0;
+  fillTray(true);
+  state = 'play';
+  updateHud(); save();
+}
+
+/* ---------------- placing and clearing ---------------- */
+function placeCat(cat, slot, col, row){
+  slots[slot].cat = null;
+  putOnBoard(cat, cat.cells.map(([c,r]) => [c + col, r + row]));
+  cat.tp.copy(boardPos(cat)); cat.ts = 1; cat.rate = 24; cat.landing = true;
+  score += cat.cells.length;
+  const { rows, cols } = fullLines();
+  const lines = rows.length + cols.length;
+  busyUntil = performance.now() + (lines ? 480 : 120);
+  later(lines ? 0.16 : 0.05, () => afterPlace(rows, cols, cat));
+  updateHud();
+}
+function afterPlace(rows, cols, origin){
+  const lines = rows.length + cols.length;
+  if (lines){
+    combo++; sinceClear = 0;
+    const center = doClear(rows, cols, origin);
+    const gain = Math.round(lines*(lines+1)/2 * 80 * (1 + (combo-1)*0.5));
+    score += gain;
+    floatText(center, '+' + gain);
+    showBanner(lines, combo);
+    sfx.clear(lines, combo); buzz([12, 30, 18]);
+    bumpScore();
+  } else {
+    sinceClear++;
+    if (sinceClear >= 3) combo = 0;
+  }
+  if (slots.every(s => !s.cat)) fillTray(true);
+  if (score > best){ best = score; store.set(BEST_KEY, best); }
+  updateHud(); save();
+  if (!slots.some(s => s.cat && fitsAnywhere(s.cat.cells))) later(0.55, gameOver);
+}
+function doClear(rows, cols, origin){
+  const cleared = lineCells(rows, cols);
+  const oc = boardPos(origin);
+  const affected = new Map();
+  const center = new V3();
+  for (const idx of cleared){
+    const id = grid[idx], cat = boardCats.get(id);
+    if (cat) affected.set(id, cat);
+    grid[idx] = 0;
+    const wp = new V3(idx % N - 3.5, 0, ((idx / N) | 0) - 3.5);
+    center.add(wp);
+    spawnPuff(wp, cat ? cat.color : 0, wp.distanceTo(oc)*0.035);
+  }
+  center.divideScalar(cleared.size).setY(1);
+  for (const cat of affected.values()){
+    const rest = cat.abs.filter(([c,r]) => !cleared.has(r*N + c));
+    boardCats.delete(cat.id); disposeCat(cat);
+    // what is left of a cat curls up into smaller cats
+    for (const comp of components(rest)){
+      const kit = makeCat(comp, cat.color);
+      placeInstant(kit, comp);
+      kit.j.sv += 4; kit.j.w = 0.8; kit.happyT = 1.2;
+    }
+  }
+  for (const cat of boardCats.values()){ cat.j.sv += 1.6; cat.j.w = Math.max(cat.j.w, 0.35); }
+  return center;
+}
+function onLand(cat){
+  cat.j.sv += 7; cat.j.w = Math.max(cat.j.w, 0.7); cat.happyT = 0.8;
+  sfx.drop(); buzz(10);
+  burst(cat.group.position.clone().setY(0.15), 4, ['dot'], ['#FFFFFF', '#FFE1E8']);
+}
+function gameOver(){
+  if (state !== 'play') return;
+  if (slots.some(s => s.cat && fitsAnywhere(s.cat.cells))) return;
+  state = 'over';
+  if (drag){ returnToSlot(drag.cat, drag.slot); drag = null; tilesDirty = true; }
+  store.del(SAVE_KEY);
+  const isRecord = score > 0 && score >= best;
+  if (score > best){ best = score; store.set(BEST_KEY, best); }
+  let d = 0;
+  for (const cat of [...boardCats.values(), ...slots.filter(s => s.cat).map(s => s.cat)]){
+    later(d, () => { cat.sad = true; cat.j.sv += 3; cat.j.w = 0.6; });
+    d += 0.02;
+  }
+  sfx.over();
+  later(0.9, () => {
+    $('finalScore').textContent = score.toLocaleString('ko-KR');
+    $('bestOver').textContent = best.toLocaleString('ko-KR');
+    $('newRecord').hidden = !isRecord;
+    $('overOv').hidden = false;
+  });
+}
+
+/* ---------------- tiles: landing ghost and line preview ---------------- */
+const _tc = new THREE.Color();
+let tilesDirty = false;
+function paintTiles(ghost, lines, color, t){
+  const glow = 0.55 + 0.2*Math.sin(t*9);
+  const hi = color ? color.clone().lerp(WHITE, 0.25) : null;
+  for (let i=0;i<N*N;i++){
+    _tc.copy(tileBase[i]);
+    if (lines && lines.has(i)) _tc.lerp(hi, glow);
+    else if (ghost && ghost.has(i)) _tc.lerp(color, 0.62);
+    tiles.setColorAt(i, _tc);
+  }
+  tiles.instanceColor.needsUpdate = true;
+}
+
+/* ---------------- input ---------------- */
+const ray = new THREE.Raycaster(), ndc = new THREE.Vector2(), ground = new THREE.Plane(new V3(0,1,0), 0);
+let W = 1, H = 1;
+function groundAt(x, y){
+  ndc.set(x/W*2 - 1, -(y/H)*2 + 1);
+  ray.setFromCamera(ndc, camera);
+  const p = new V3();
+  return ray.ray.intersectPlane(ground, p) ? p : null;
+}
+function nearestSlot(g){
+  let bi = -1, bd = 1.6;
+  slots.forEach((s, i) => { if (!s.cat) return; const d = Math.hypot(g.x - s.pos.x, g.z - s.pos.z); if (d < bd){ bd = d; bi = i; } });
+  return bi;
+}
+function catAt(g){
+  const c = Math.floor(g.x + N/2), r = Math.floor(g.z + N/2);
+  if (c < 0 || r < 0 || c >= N || r >= N) return null;
+  const id = grid[r*N + c];
+  return id ? boardCats.get(id) : null;
+}
+function pokeWithFx(cat){
+  poke(cat, 1);
+  meow(pitchFor(cat)); buzz(8);
+  const hp = new V3(); cat.headG.getWorldPosition(hp); hp.y += 0.45*cat.group.scale.x;
+  burst(hp, 2, ['heart'], ['#FF8FAB', '#FF6F8E'], 0.8);
+  if (cat.abs){
+    const near = new Set();
+    for (const [c,r] of cat.abs) for (const [dc,dr] of [[1,0],[-1,0],[0,1],[0,-1]]){
+      const x = c+dc, y = r+dr; if (x < 0 || y < 0 || x >= N || y >= N) continue;
+      const id = grid[y*N + x]; if (id && id !== cat.id) near.add(id);
+    }
+    for (const id of near){ const o = boardCats.get(id); if (o){ o.j.sv += 2.2; o.j.w = Math.max(o.j.w, 0.45); } }
+  }
+}
+function returnToSlot(cat, slot){
+  slots[slot].cat = cat; cat.slot = slot;
+  cat.tp.copy(slots[slot].pos).setY(TRAY_Y); cat.ts = TRAY_SCALE; cat.rate = 13; cat.hover = false;
+  cat.j.sv += 3; cat.j.w = Math.max(cat.j.w, 0.5);
+}
+
+canvas.addEventListener('pointerdown', (e) => {
+  audioUnlock();
+  if (state !== 'play' || drag) return;
+  const g = groundAt(e.clientX, e.clientY); if (!g) return;
+  const si = nearestSlot(g);
+  if (si >= 0 && performance.now() > busyUntil){
+    const cat = slots[si].cat;
+    try { canvas.setPointerCapture(e.pointerId); } catch(err){}
+    drag = {
+      cat, slot:si, id:e.pointerId, g:g.clone(), off:0,
+      offset: new V3(0, 0, e.pointerType === 'mouse' ? -0.35 : -2.3),
+      sx:e.clientX, sy:e.clientY, t0:performance.now(), moved:false,
+      col:null, row:null, valid:false, over:false, lines:null, ghost:null, hot:new Set(),
+    };
+    cat.ts = 1; cat.rate = 30; cat.j.sv -= 6; cat.j.w = Math.max(cat.j.w, 0.4); cat.hover = true;
+    sfx.pick(); buzz(6);
+    canvas.style.cursor = 'grabbing';
+    return;
+  }
+  const cat = catAt(g);
+  if (cat) pokeWithFx(cat);
+});
+canvas.addEventListener('pointermove', (e) => {
+  if (drag && e.pointerId === drag.id){
+    const g = groundAt(e.clientX, e.clientY); if (g) drag.g.copy(g);
+    if (Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) > 8) drag.moved = true;
+    return;
+  }
+  if (e.pointerType === 'mouse' && state === 'play'){
+    const g = groundAt(e.clientX, e.clientY);
+    canvas.style.cursor = g && nearestSlot(g) >= 0 ? 'grab' : (g && catAt(g) ? 'pointer' : 'default');
+  }
+});
+function endDrag(e, cancelled){
+  if (!drag || e.pointerId !== drag.id) return;
+  const d = drag;
+  if (!cancelled){
+    // settle the drop on the release point, even if no frame ran since the last move
+    const g = groundAt(e.clientX, e.clientY); if (g) d.g.copy(g);
+    d.off = 1; d.col = null; updateDrag(0, TIME.value);
+  }
+  drag = null;
+  for (const c of d.hot) c.hover = false;
+  d.cat.hover = false;
+  canvas.style.cursor = 'default';
+  const tap = !d.moved && performance.now() - d.t0 < 300;
+  if (!cancelled && !tap && d.valid && state === 'play') placeCat(d.cat, d.slot, d.col, d.row);
+  else {
+    returnToSlot(d.cat, d.slot);
+    if (tap) pokeWithFx(d.cat);
+    else if (d.over) sfx.nope();
+  }
+  tilesDirty = true;
+}
+canvas.addEventListener('pointerup', (e) => endDrag(e, false));
+canvas.addEventListener('pointercancel', (e) => endDrag(e, true));
+canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+
+const _L = new V3();
+function updateDrag(dt, t){
+  const d = drag, cat = d.cat;
+  d.off = Math.min(1, d.off + dt/0.12);
+  _L.copy(d.g).addScaledVector(d.offset, d.off);
+  // hold the cat in the air, on the line of sight to its landing point
+  const cam = camera.position, k = LIFT / cam.y;
+  cat.tp.set(_L.x + (cam.x - _L.x)*k, LIFT, _L.z + (cam.z - _L.z)*k);
+  const col = Math.round(_L.x - cat.w/2 + N/2), row = Math.round(_L.z - cat.h/2 + N/2);
+  if (col !== d.col || row !== d.row){
+    d.col = col; d.row = row;
+    d.over = Math.abs(_L.x) < N/2 + 0.6 && Math.abs(_L.z) < N/2 + 0.6;
+    d.valid = canPlace(cat.cells, col, row);
+    for (const c of d.hot) c.hover = false;
+    d.hot.clear();
+    if (d.valid){
+      d.ghost = new Set(cat.cells.map(([c,r]) => (r+row)*N + (c+col)));
+      const { rows, cols } = fullLines(d.ghost);
+      d.lines = rows.length || cols.length ? lineCells(rows, cols) : null;
+      if (d.lines) for (const i of d.lines){ const o = boardCats.get(grid[i]); if (o){ o.hover = true; d.hot.add(o); } }
+    } else { d.ghost = null; d.lines = null; }
+  }
+  paintTiles(d.ghost, d.lines, d.valid ? new THREE.Color(COLORS[cat.color].body) : null, t);
+}
+
+/* ---------------- HUD ---------------- */
+const scoreEl = $('score'), bestEl = $('best'), comboEl = $('combo');
+function updateHud(){
+  bestEl.textContent = best.toLocaleString('ko-KR');
+  comboEl.hidden = combo < 2;
+  comboEl.textContent = TXT.combo + combo;
+}
+function bumpScore(){ scoreEl.classList.remove('bump'); void scoreEl.offsetWidth; scoreEl.classList.add('bump'); }
+function floatText(world, text){
+  const v = world.clone().project(camera);
+  const el = document.createElement('div');
+  el.className = 'float'; el.textContent = text;
+  el.style.left = ((v.x + 1)/2*W) + 'px'; el.style.top = ((1 - v.y)/2*H) + 'px';
+  $('fx').appendChild(el);
+  setTimeout(() => el.remove(), 1100);
+}
+function showBanner(lines, c){
+  const b = $('banner');
+  b.querySelector('.big').textContent = TXT.cheers[Math.min(lines, 5)];
+  const sm = b.querySelector('.small'); sm.hidden = c < 2; sm.textContent = TXT.combo + c;
+  b.classList.remove('show'); void b.offsetWidth; b.classList.add('show');
+}
+function setSoundIcon(){
+  $('icoOn').hidden = !soundOn; $('icoOff').hidden = soundOn;
+  $('soundBtn').setAttribute('aria-label', soundOn ? TXT.soundOff : TXT.soundOn);
+}
+function enterPlay(){ $('startOv').hidden = true; $('hud').classList.remove('dim'); }
+$('soundBtn').addEventListener('click', () => { soundOn = !soundOn; store.set(SOUND_KEY, soundOn); setSoundIcon(); audioUnlock(); if (soundOn) meow(1.2, 0.1); });
+$('restartBtn').addEventListener('click', () => { audioUnlock(); if (state === 'play') $('confirmOv').hidden = false; });
+$('cancelBtn').addEventListener('click', () => { $('confirmOv').hidden = true; });
+$('confirmBtn').addEventListener('click', () => { $('confirmOv').hidden = true; store.del(SAVE_KEY); newGame(); });
+$('againBtn').addEventListener('click', () => { audioUnlock(); $('overOv').hidden = true; newGame(); });
+$('newBtn').addEventListener('click', () => { audioUnlock(); enterPlay(); store.del(SAVE_KEY); newGame(); meow(1.15, 0.12, 0.15); });
+$('continueBtn').addEventListener('click', () => {
+  audioUnlock(); enterPlay(); state = 'play'; updateHud();
+  for (const cat of cats) poke(cat, 0.6);
+  meow(1.15, 0.12, 0.1);
+});
+
+/* ---------------- layout: fit board + beds between the HUD and the bottom edge ---------------- */
+const safeProbe = document.createElement('div');
+safeProbe.style.cssText = 'position:fixed;bottom:0;left:0;width:1px;height:env(safe-area-inset-bottom,0px);pointer-events:none;visibility:hidden';
+document.body.appendChild(safeProbe);
+const EL = THREE.MathUtils.degToRad(64);
+function layout(){
+  W = window.innerWidth; H = window.innerHeight;
+  renderer.setSize(W, H, false);
+  camera.aspect = W/H;
+  const land = W/H > 1.05;
+  slots.forEach((s, i) => {
+    if (land) s.pos.set(N/2 + 2.7, 0, (i-1)*2.85); else s.pos.set((i-1)*2.85, 0, N/2 + 2.35);
+    s.bed.position.set(s.pos.x, 0, s.pos.z);
+    if (s.cat && (!drag || drag.cat !== s.cat)){ s.cat.tp.copy(s.pos).setY(TRAY_Y); s.cat.group.position.copy(s.cat.tp); }
+  });
+  const minX = -4.6, maxX = land ? N/2 + 4.1 : 4.6, minZ = -4.6, maxZ = land ? 4.6 : N/2 + 3.75;
+  const center = new V3((minX + maxX)/2, 0, (minZ + maxZ)/2);
+  const dir = new V3(0, Math.sin(EL), Math.cos(EL));
+  const corners = [];
+  for (const x of [minX, maxX]) for (const y of [-0.5, 1.3]) for (const z of [minZ, maxZ]) corners.push(new V3(x, y, z));
+  const hudB = $('hud').getBoundingClientRect().bottom + 8;
+  const top = 1 - 2*hudB/H, bottom = -1 + 2*(14 + safeProbe.offsetHeight)/H;
+  const side = 1 - 2*14/W;
+  const measure = () => {
+    let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+    for (const c of corners){ const v = c.clone().project(camera); x0 = Math.min(x0, v.x); x1 = Math.max(x1, v.x); y0 = Math.min(y0, v.y); y1 = Math.max(y1, v.y); }
+    return { x0, x1, y0, y1 };
+  };
+  const put = (d) => { camera.position.copy(center).addScaledVector(dir, d); camera.lookAt(center); camera.updateProjectionMatrix(); camera.updateMatrixWorld(true); };
+  let lo = 8, hi = 300;
+  for (let i=0;i<30;i++){
+    const d = (lo + hi)/2; put(d);
+    const m = measure();
+    if (m.x1 - m.x0 <= 2*side && m.y1 - m.y0 <= top - bottom) hi = d; else lo = d;
+  }
+  put(hi);
+  // shift the projection so the scene is centered in the free area
+  const m = measure();
+  camera.projectionMatrix.elements[8] += (m.x0 + m.x1)/2;
+  camera.projectionMatrix.elements[9] -= (top + bottom)/2 - (m.y0 + m.y1)/2;
+  camera.projectionMatrixInverse.copy(camera.projectionMatrix).invert();
+  const bc = new V3(0, 0.8, -0.5).project(camera);
+  $('banner').style.top = ((1 - bc.y)/2*H) + 'px';
+}
+window.addEventListener('resize', layout);
+if (window.visualViewport) window.visualViewport.addEventListener('resize', layout);
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(layout);
+
+/* ---------------- loop ---------------- */
+const clock = new THREE.Clock();
+function frame(){
+  requestAnimationFrame(frame);
+  const dt = Math.min(clock.getDelta(), 1/30);
+  TIME.value += dt;
+  const t = TIME.value;
+  for (let i = timers.length - 1; i >= 0; i--){
+    timers[i].t -= dt;
+    if (timers[i].t <= 0){ const f = timers[i].fn; timers.splice(i, 1); f(); }
+  }
+  if (drag) updateDrag(dt, t);
+  else if (tilesDirty){ paintTiles(null, null, null, t); tilesDirty = false; }
+  for (const cat of cats) updateCat(cat, dt, t);
+  updatePuffs(dt);
+  updateParts(dt);
+  shownScore += (score - shownScore) * (1 - Math.exp(-dt*10));
+  if (Math.abs(score - shownScore) < 0.5) shownScore = score;
+  scoreEl.textContent = Math.round(shownScore).toLocaleString('ko-KR');
+  renderer.render(scene, camera);
+}
+
+/* ---------------- boot ---------------- */
+function start(data){
+  layout();
+  setSoundIcon();
+  const hotGame = data && data.board && data.state === 'play' ? data : null;
+  const saved = hotGame || store.get(SAVE_KEY);
+  if (saved && saved.board) restore(saved); else fillTray(false);
+  updateHud();
+  $('bestStart').textContent = best.toLocaleString('ko-KR');
+  if (hotGame){
+    state = 'play'; enterPlay();
+  } else {
+    state = 'menu';
+    const canContinue = !!(saved && saved.board && (saved.board.length || saved.score));
+    $('continueBtn').hidden = !canContinue;
+    $('newBtn').textContent = canContinue ? TXT.newGame : TXT.start;
+    $('newBtn').classList.toggle('secondary', canContinue);
+  }
+  requestAnimationFrame(frame);
+}
+const hot = window.claude && window.claude.hot;
+if (hot && hot.snapshot) hot.snapshot(() => serialize());
+if (hot && hot.ready) hot.ready(start); else start((hot && hot.data) || {});
+</script>
+<!--ARTIFACT-BODY-END-->
+</body>
+</html>
