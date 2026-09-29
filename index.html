@@ -501,7 +501,7 @@ function makeCat(cellsIn, colorIdx){
   const geos = new Set();
   const group = new THREE.Group();
   const mesh = (geo, mat, parent, shadow = false) => {
-    const m = new THREE.Mesh(geo, mat); m.castShadow = shadow; m.receiveShadow = shadow; parent.add(m); geos.add(geo); return m;
+    const m = new THREE.Mesh(geo, mat); parent.add(m); geos.add(geo); return m;
   };
   const lc = (c,r) => new V3(c + 0.5 - w/2, 0, r + 0.5 - h/2);
 
@@ -762,7 +762,7 @@ const puffMats = COLORS.map(c => new THREE.MeshStandardMaterial({ color:c.body, 
 const puffs = [];
 function spawnPuff(pos, color, delay){
   const m = new THREE.Mesh(bodyBase([[0,0]]), puffMats[color]);
-  m.position.copy(pos); m.castShadow = true; scene.add(m);
+  m.position.copy(pos); scene.add(m);
   puffs.push({ m, delay, t:0, popped:false, color });
 }
 function updatePuffs(dt){
