@@ -259,7 +259,10 @@ renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
 const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(30, 1, 0.5, 200);
+// orthographic: no perspective, the board stays a true rectangle on screen
+const camera = new THREE.OrthographicCamera(-10, 10, 10, -10, 0.1, 400);
+const CAM_EL = THREE.MathUtils.degToRad(80);
+const CAM_DIR = new THREE.Vector3(0, Math.sin(CAM_EL), Math.cos(CAM_EL));
 
 scene.add(new THREE.HemisphereLight(0xfff6f2, 0xf2c3cc, 1.35));
 const sun = new THREE.DirectionalLight(0xffffff, 1.55);
@@ -464,7 +467,7 @@ function tailBase(side){
 
 /* ---------------- cats ---------------- */
 const HEAD_R = new V3(0.5, 0.37, 0.45);
-const FACE_F = new V3(0, 0.74, 0.67).normalize();
+const FACE_F = new V3(0, 0.82, 0.57).normalize();
 const FACE_R = new V3(1, 0, 0);
 const FACE_U = new V3().crossVectors(FACE_F, FACE_R).normalize();
 function surf(a, b, lift = 0){
@@ -1149,8 +1152,8 @@ function updateDrag(dt, t){
   d.off = Math.min(1, d.off + dt/0.12);
   _L.copy(d.g).addScaledVector(d.offset, d.off);
   // hold the cat in the air, on the line of sight to its landing point
-  const cam = camera.position, k = LIFT / cam.y;
-  cat.tp.set(_L.x + (cam.x - _L.x)*k, LIFT, _L.z + (cam.z - _L.z)*k);
+  const k = LIFT / CAM_DIR.y;
+  cat.tp.set(_L.x + CAM_DIR.x*k, LIFT, _L.z + CAM_DIR.z*k);
   const col = Math.round(_L.x - cat.w/2 + N/2), row = Math.round(_L.z - cat.h/2 + N/2);
   if (col !== d.col || row !== d.row){
     d.col = col; d.row = row;
@@ -1211,11 +1214,9 @@ $('continueBtn').addEventListener('click', () => {
 const safeProbe = document.createElement('div');
 safeProbe.style.cssText = 'position:fixed;bottom:0;left:0;width:1px;height:env(safe-area-inset-bottom,0px);pointer-events:none;visibility:hidden';
 document.body.appendChild(safeProbe);
-const EL = THREE.MathUtils.degToRad(64);
 function layout(){
   W = window.innerWidth; H = window.innerHeight;
   renderer.setSize(W, H, false);
-  camera.aspect = W/H;
   const land = W/H > 1.05;
   slots.forEach((s, i) => {
     if (land) s.pos.set(N/2 + 2.7, 0, (i-1)*2.85); else s.pos.set((i-1)*2.85, 0, N/2 + 2.35);
@@ -1224,30 +1225,23 @@ function layout(){
   });
   const minX = -4.6, maxX = land ? N/2 + 4.1 : 4.6, minZ = -4.6, maxZ = land ? 4.6 : N/2 + 3.75;
   const center = new V3((minX + maxX)/2, 0, (minZ + maxZ)/2);
-  const dir = new V3(0, Math.sin(EL), Math.cos(EL));
-  const corners = [];
-  for (const x of [minX, maxX]) for (const y of [-0.5, 1.3]) for (const z of [minZ, maxZ]) corners.push(new V3(x, y, z));
+  camera.position.copy(center).addScaledVector(CAM_DIR, 60);
+  camera.lookAt(center);
+  camera.updateMatrixWorld(true);
+  // measure the scene in view space, then size the frustum so it fits the free area
+  let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+  for (const x of [minX, maxX]) for (const y of [-0.5, 1.3]) for (const z of [minZ, maxZ]){
+    const v = new V3(x, y, z).applyMatrix4(camera.matrixWorldInverse);
+    x0 = Math.min(x0, v.x); x1 = Math.max(x1, v.x); y0 = Math.min(y0, v.y); y1 = Math.max(y1, v.y);
+  }
   const hudB = $('hud').getBoundingClientRect().bottom + 8;
   const top = 1 - 2*hudB/H, bottom = -1 + 2*(14 + safeProbe.offsetHeight)/H;
   const side = 1 - 2*14/W;
-  const measure = () => {
-    let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
-    for (const c of corners){ const v = c.clone().project(camera); x0 = Math.min(x0, v.x); x1 = Math.max(x1, v.x); y0 = Math.min(y0, v.y); y1 = Math.max(y1, v.y); }
-    return { x0, x1, y0, y1 };
-  };
-  const put = (d) => { camera.position.copy(center).addScaledVector(dir, d); camera.lookAt(center); camera.updateProjectionMatrix(); camera.updateMatrixWorld(true); };
-  let lo = 8, hi = 300;
-  for (let i=0;i<30;i++){
-    const d = (lo + hi)/2; put(d);
-    const m = measure();
-    if (m.x1 - m.x0 <= 2*side && m.y1 - m.y0 <= top - bottom) hi = d; else lo = d;
-  }
-  put(hi);
-  // shift the projection so the scene is centered in the free area
-  const m = measure();
-  camera.projectionMatrix.elements[8] += (m.x0 + m.x1)/2;
-  camera.projectionMatrix.elements[9] -= (top + bottom)/2 - (m.y0 + m.y1)/2;
-  camera.projectionMatrixInverse.copy(camera.projectionMatrix).invert();
+  const sx = Math.max((x1 - x0)/(2*side), (y1 - y0)*W/((top - bottom)*H));
+  const sy = sx*H/W;
+  const cx = (x0 + x1)/2, cy = (y0 + y1)/2 - (top + bottom)/2*sy;
+  camera.left = cx - sx; camera.right = cx + sx; camera.top = cy + sy; camera.bottom = cy - sy;
+  camera.updateProjectionMatrix();
   const bc = new V3(0, 0.8, -0.5).project(camera);
   $('banner').style.top = ((1 - bc.y)/2*H) + 'px';
 }
